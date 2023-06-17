@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2doParcial</title>
+    
+    <style>
+        body{
+            background: rgb(117, 117, 117);
+            text-align: center;
+            width: 80%; 
+            margin: 0 auto;
+            font-family: monospace;
+        }
+       
+        #form_principal{
+            background: rgb(255, 255, 255);
+            text-align: left;
+            border-radius:5px;
+        }
+
+        #form_abm{
+            background: grey;
+            text-align: left;
+            width: 80%;
+            margin: auto;
+            font-weight: bold;
+            border-radius:3px;
+        }
+
+        #form_abm input[type = "text"]{
+            border: 2px solid #f6f6f6;
+            border-radius:3px;
+            background-color:#f6f6f6;
+	        margin:5px 0;
+        }
+
+        #form_abm label{
+           font-weight:bold;
+           width: 18%;
+           display: inline-block;
+        }
+
+        .spinner {
+            width: 100%;height: 100%;
+            overflow: hidden;
+            top: 0px;
+            left: 0px;
+            z-index: 10000;
+            text-align: center;
+            position:absolute;
+            background-color: #FFFFFF;
+            opacity:0.6;
+        }
+
+
+        @keyframes spin{
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        input{
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body id="body">
+    <h1>2do Parcial</h1>
+
+    <div id="spinner" class="spinner" style="display:block;">
+        <img style="margin-top: 10%" alt="Espere..." src="spinner.gif" width="100px" height="100px" />
+    </div>
+        
+    </div>
+        
+    <form action="" method="" name="form1" id="form_principal" >
+        <table id="tabla" style="width: 100%;">
+            <thead id="encabezado">
+            </thead>
+            <tbody id="formBody">
+            </tbody>
+        </table>
+      
+    </form>
+
+    <form action="" method="" name="form2" id="form_abm" hidden>
+        <label id="tituloABM"></label>
+        <div><label>ID:</label>
+            <input id="txt_id" type="text" readonly></div>
+        <div><label>Modelo:</label>
+            <input id="txt_modelo" type="text"></div>
+        <div><label>Año Fabricacion:</label>
+            <input id="txt_anoFab" type="text" placeholder="Mayor a 1885"></div>
+        <div><label>Vel Maxima:</label>
+            <input id="txt_velMax" type="text" placeholder="Mayor a 0"></div>
+        
+        <div><label>Filtro:</label><select id="select_filtrarABM" onchange="mostrarFiltroABM()" value="--">
+            <option value="0" hidden>--</option>
+            <option value="1">Aereo</option>
+            <option value="2">Terrestre</option>
+        </select></div>
+        <section id ="sec_Aereo" hidden>
+        <div><label>Alt Max:</label>
+            <input id="txt_altMax" type="text" placeholder="Mayor a 0" ></div>
+        <div><label>Autonomia:</label>
+            <input id="txt_autonomia" type="text" placeholder="Mayor a 0"></div>
+        </section>
+        <section id ="sec_Terrestre" hidden>
+            <div><label>Cant Puertas:</label>
+                <input id="txt_cantPue" type="text" placeholder="Mayor a -1"></div>
+            <div><label>Cant Ruedas:</label>
+                <input id="txt_cantRue" type="text" placeholder="Mayor a 0"></div>
+        </section>
+        <div>
+            <input type="button" value="Aceptar" id="btn_Agregar" onclick ="btnAgregar()" hidden>
+            <input type="button" value="Aceptar" id="btn_Modificar" onclick ="btnModificar()" hidden>
+            <input type="button" value="Aceptar" id="btn_Eliminar" onclick ="btnEliminar()" hidden>
+            <input type="button" value="Cancelar" id="btn_cancelar" onclick="btnCancelar()">
+        </div>
+    </form>
+
+</body>
+
+<script>
+/*CLASES*/
+    class Vehiculo {
+        id;
+        modelo;
+        anoFab;
+        velMax;
+
+        constructor(id, modelo, anoFab, velMax) {
+            this.id = id;
+            this.modelo = modelo;
+            this.anoFab = anoFab;
+            this.velMax=velMax;
+        }
+
+        toString() {
+            return "ID: "+this.id+ " Modelo: " +this.modelo+ " Año Fabricacion: " +this.anoFab+ " Vel Maxima " +this.velMax+"."; 
+        }
+    }
+
+    class Aereo extends Vehiculo{
+        altMax;
+        autonomia;
+
+        constructor(id,modelo,anoFab,velMax,altMax,autonomia){
+            super(id,modelo,anoFab,velMax);
+            this.altMax=altMax;
+            this.autonomia=autonomia;
+        }
+
+        toString() {
+            return super.toString() +"\nAltura Maxima "+this.altMax+ " Autonomia " +this.autonomia; 
+        }
+    }
+
+    class Terrestre extends Vehiculo{
+        cantPue;
+        cantRue;
+        
+        constructor(id,modelo,anoFab,velMax,cantPue, cantRue){
+            super(id,modelo,anoFab,velMax);
+            this.cantPue=cantPue;
+            this.cantRue=cantRue;
+        }
+
+        toString(){
+            return super.toString()+"\n Cantidad de Puertas "+this.cantPue+ " Cantidad de Ruedas " +this.cantRue;
+        }
+    }
+
+    let flagForm=0;
+    let vehiculos;
+
+    window.addEventListener("load", ()=>{cargarPagina()});
+
+    async function cargarPagina() {
+        response = await fetch ("http://localhost/Labo3Viernes/2Parcial/vehiculoAereoTerrestre.php",{
+            method :"GET"
+        })
+
+        if(response.status == 200){
+            var r = await response.text();
+            vehiculos = JSON.parse(r)
+            cargarTabla(vehiculos);
+            ocultarSpinner();
+        }
+    }
+
+    function convertirJsonObjeto(json)
+    {
+        let arrayP= new Array();
+
+        json.forEach(e => {
+            if (e.hasOwnProperty("altMax")) {
+                arrayP.push(new Aereo(e.id,e.modelo,e.anoFab,e.velMax,e.altMax,e.autonomia));
+            } else {
+                arrayP.push(new Terrestre(e.id,e.modelo,e.anoFab,e.velMax,e.cantPue,e.cantRue));
+            }
+        });
+        return arrayP;
+    }
+
+    function cargarTabla(vehiculos) {
+        document.getElementById("formBody").innerHTML ="";
+
+        cargarEncabezados();
+        vehiculos.forEach(vehiculo => {
+            let fila = document.createElement("tr");
+
+            addCelda(fila,vehiculo.id);
+            addCelda(fila,vehiculo.modelo);
+            addCelda(fila,vehiculo.anoFab);
+            addCelda(fila,vehiculo.velMax);
+
+            if(vehiculo.hasOwnProperty("altMax")){
+                addCelda(fila,vehiculo.altMax)
+                addCelda(fila,vehiculo.autonomia)
+                addCelda(fila,"N/A")
+                addCelda(fila,"N/A")
+            }
+            if(vehiculo.hasOwnProperty("cantPue")){
+                addCelda(fila,"N/A")
+                addCelda(fila,"N/A")
+                addCelda(fila,vehiculo.cantPue)
+                addCelda(fila,vehiculo.cantRue)
+            }
+            
+            let td1 = document.createElement("td");
+            let button1 = document.createElement("input");
+            button1.value = "Modificar";
+            button1.type ="button";
+            button1.addEventListener("click" , ()=> modificar(vehiculo));
+            td1.appendChild(button1);
+            fila.appendChild(td1);
+            
+            let td2 = document.createElement("td");
+            let button2 = document.createElement("input");
+            button2.value = "Eliminar";
+            button2.type ="button";
+            button2.addEventListener("click" , ()=> eliminar(vehiculo));
+            td2.appendChild(button2);
+            fila.appendChild(td2);
+
+            document.getElementById("formBody").appendChild(fila);
+        })
+        let button = document.createElement("input");
+        button.value = "Agregar Vehiculo";
+        button.type ="button";
+        button.addEventListener("click" , ()=> (agregarVehiculo()));
+        document.getElementById("formBody").appendChild(button);
+    }
+
+    function cargarEncabezados() { 
+        let encabezados = document.getElementById("encabezado");
+        encabezados.innerHTML = "";
+
+        let fila = document.createElement("tr");
+   
+        let id = document.createElement("td");
+        let lblId = document.createElement("label");
+        lblId.textContent = "ID";
+        id.appendChild(lblId);
+        fila.appendChild(id);
+
+        let modelo = document.createElement("td");
+        let lblModelo = document.createElement("label");
+        lblModelo.textContent = "MODELO";
+        modelo.appendChild(lblModelo);
+        fila.appendChild(modelo);
+
+        let anoFab = document.createElement("td");
+        let lblAnoFab = document.createElement("label");
+        lblAnoFab.textContent = "AÑO FABRICACION";
+        anoFab.appendChild(lblAnoFab);
+        fila.appendChild(anoFab);
+        
+        let velMax = document.createElement("td");
+        let lblVelMax = document.createElement("label");
+        lblVelMax.textContent = "VEL MAXIMA";
+        velMax.appendChild(lblVelMax);
+        fila.appendChild(velMax);
+
+        let altMax = document.createElement("td");
+        let lblAltMax = document.createElement("label");
+        lblAltMax.textContent = "ALT MAXIMA";
+        altMax.appendChild(lblAltMax);
+        fila.appendChild(altMax);
+        
+        let autonomia = document.createElement("td");
+        let lblAutonomia = document.createElement("label");
+        lblAutonomia.textContent = "AUTONOMIA";
+        autonomia.appendChild(lblAutonomia);
+        fila.appendChild(autonomia);
+
+        let cantPue = document.createElement("td");
+        let lblCantPue = document.createElement("label");
+        lblCantPue.textContent = "CANT PUERTAS";
+        cantPue.appendChild(lblCantPue);
+        fila.appendChild(cantPue);
+
+        let cantRue = document.createElement("td");
+        let lblCantRue = document.createElement("label");
+        lblCantRue.textContent = "CANT RUEDAS";
+        cantRue.appendChild(lblCantRue);
+        fila.appendChild(cantRue);
+        
+        let modificar = document.createElement("td");
+        let lblModificar = document.createElement("label");
+        lblModificar.textContent = "MODIFICAR";
+        modificar.appendChild(lblModificar);
+        fila.appendChild(modificar);
+        
+        let eliminar = document.createElement("td");
+        let lblEliminar = document.createElement("label");
+        lblEliminar.textContent = "ELIMINAR";
+        eliminar.appendChild(lblEliminar);
+        fila.appendChild(eliminar);
+
+        encabezados.appendChild(fila);
+    }
+
+    function addCelda(fila,text)
+    {
+        let td = document.createElement("td");
+        td.appendChild(document.createTextNode(text));
+        fila.appendChild(td);
+    }
+
+    function mostrarSpinner(){
+        document.getElementById("spinner").style.display="block";
+    }
+    
+    function ocultarSpinner(){
+        document.getElementById("spinner").style.display="none";
+    }
+
+    
+    function mostrarFiltroABM(){
+        if(document.getElementById("select_filtrarABM").value == 1){
+            document.getElementById("sec_Aereo").style.display ="inline";
+            document.getElementById("sec_Terrestre").style.display ="none";
+
+        }else{
+            document.getElementById("sec_Terrestre").style.display ="inline";
+            document.getElementById("sec_Aereo").style.display ="none";
+        }
+    }
+
+
+    /*AGREGAR */
+    function agregarVehiculo(){
+        switchForm();
+        document.getElementById("btn_Agregar").style.display = "inline";
+        document.getElementById("txt_id").disabled = true;
+        document.getElementById("tituloABM").innerHTML ="Agregar";
+
+    }
+
+    function btnAgregar(){
+        if(validarDatos()){
+            mostrarSpinner();
+                if(document.getElementById("select_filtrarABM").value==1){
+                        putVehiculo(document.getElementById("txt_modelo").value,document.getElementById("txt_anoFab").value, document.getElementById("txt_velMax").value, document.getElementById("txt_altMax").value, document.getElementById("txt_autonomia").value,"Aereo");
+                    }else{
+                        putVehiculo(document.getElementById("txt_modelo").value,document.getElementById("txt_anoFab").value, document.getElementById("txt_velMax").value, document.getElementById("txt_cantPue").value, document.getElementById("txt_cantRue").value,"Terrestre");
+                }
+        }else{
+            alert("Datos incompletos/erroneos");
+        }
+    }   
+    /*MODIFICAR*/
+    function modificar(vehiculo)
+    {
+        switchForm();
+        document.getElementById("btn_Modificar").style.display = "inline";
+        document.getElementById("tituloABM").innerHTML ="Modificar";
+        document.getElementById("txt_id").value = vehiculo.id;
+        document.getElementById("txt_modelo").value = vehiculo.modelo;
+        document.getElementById("txt_anoFab").value = vehiculo.anoFab;
+        document.getElementById("txt_velMax").value = vehiculo.velMax;
+        document.getElementById("select_filtrarABM").disabled=true;
+        
+        if(vehiculo.hasOwnProperty("altMax"))
+        {
+            document.getElementById("select_filtrarABM").value =1;
+            document.getElementById("txt_altMax").value = vehiculo.altMax;
+            document.getElementById("txt_autonomia").value = vehiculo.autonomia;
+        }else{
+            document.getElementById("select_filtrarABM").value=2;
+            document.getElementById("txt_cantPue").value = vehiculo.cantPue;
+            document.getElementById("txt_cantRue").value = vehiculo.cantRue;
+        }
+        mostrarFiltroABM();
+    }
+
+    //funcion asincronica
+    async function btnModificar(){
+        if(validarDatos()){
+            mostrarSpinner();
+                if(document.getElementById("select_filtrarABM").value==1){
+                        await postVehiculo(parseInt(document.getElementById("txt_id").value),document.getElementById("txt_modelo").value,document.getElementById("txt_anoFab").value, document.getElementById("txt_velMax").value, document.getElementById("txt_altMax").value, document.getElementById("txt_autonomia").value,"Aereo");
+                    }else{
+                        await postVehiculo(parseInt(document.getElementById("txt_id").value),document.getElementById("txt_modelo").value,document.getElementById("txt_anoFab").value, document.getElementById("txt_velMax").value, document.getElementById("txt_cantPue").value, document.getElementById("txt_cantRue").value,"Terrestre");
+                }
+            ocultarSpinner();
+            switchForm();
+        }else{
+            alert("Datos incompletos/erroneos");
+        }
+    }
+    
+    /*ELIMINAR*/
+    function eliminar(vehiculo)
+    {
+        switchForm();
+        document.getElementById("btn_Eliminar").style.display = "inline";
+        document.getElementById("tituloABM").innerHTML ="Eliminar";
+        document.getElementById("txt_id").value = vehiculo.id;
+        document.getElementById("txt_modelo").value = vehiculo.modelo;
+        document.getElementById("txt_anoFab").value = vehiculo.anoFab;
+        document.getElementById("txt_velMax").value = vehiculo.velMax;
+        document.getElementById("select_filtrarABM").disabled=true;
+        
+        if(vehiculo.hasOwnProperty("altMax"))
+        {
+            document.getElementById("select_filtrarABM").value =1;
+            document.getElementById("txt_altMax").value = vehiculo.altMax;
+            document.getElementById("txt_autonomia").value = vehiculo.autonomia;
+        }else{
+            document.getElementById("select_filtrarABM").value=2;
+            document.getElementById("txt_cantPue").value = vehiculo.cantPue;
+            document.getElementById("txt_cantRue").value = vehiculo.cantRue;
+        }
+        mostrarFiltroABM();
+    }  
+    
+    async function btnEliminar(){
+            mostrarSpinner();
+
+            await deleteVehiculo(document.getElementById("txt_id").value);
+
+            ocultarSpinner();
+            switchForm();
+    }
+
+    function switchForm() {
+        document.getElementById("btn_Agregar").style.display = "none";
+        document.getElementById("btn_Modificar").style.display = "none";
+        document.getElementById("btn_Eliminar").style.display = "none";
+        document.getElementById("sec_Aereo").style.display ="none";
+        document.getElementById("sec_Terrestre").style.display ="none";
+        document.getElementById("select_filtrarABM").disabled=false;
+        document.getElementById("select_filtrarABM").value=0;
+
+
+        if(!flagForm){
+            document.getElementById("form_principal").style.display = "none";
+            document.getElementById("form_abm").style.display = "block";
+            flagForm=true;
+        }else{        
+            document.getElementById("form_principal").style.display = "block";
+            document.getElementById("form_abm").style.display = "none";
+            flagForm=false;
+        }
+        //Limpiamos formulario
+        document.getElementById("txt_id").value = "";
+        document.getElementById("txt_modelo").value = "";
+        document.getElementById("txt_anoFab").value = "";
+        document.getElementById("txt_velMax").value = "";
+        document.getElementById("txt_altMax").value = "";
+        document.getElementById("txt_autonomia").value = "";
+        document.getElementById("txt_cantPue").value = "";
+        document.getElementById("txt_cantRue").value = "";
+        recargarFormulario();
+    }
+
+    function btnCancelar(){
+        switchForm();
+    }
+    
+    function recargarFormulario(){
+         cargarTabla(vehiculos);
+    }
+
+        /*PETICIONES*/
+    function putVehiculo(modelo, anoFab, velMax,  Atributo1, Atributo2, tipo){
+        let response;
+
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+        if (xhttp.readyState == 4 && xhttp.status == 200) {
+            var response = JSON.parse(xhttp.response);
+
+            if(tipo =="Aereo")
+                vehiculos.push(new Aereo(parseInt(response.id), modelo, parseInt(anoFab), parseInt(velMax), parseInt(Atributo1), parseInt(Atributo2)));
+            else
+                vehiculos.push(new Terrestre(parseInt(response.id), modelo, parseInt(anoFab), parseInt(velMax), parseInt(Atributo1), parseInt(Atributo2)));
+
+            ocultarSpinner();
+            switchForm();
+        }
+
+        if(XMLHttpRequest == 4 && xhttp.status == 400)
+        {
+            var response = JSON.parse(xhttp.response);
+            alert("Error al cargar archivo");
+            ocultarSpinner();
+            switchForm();
+        }
+        };
+        
+        xhttp.open("PUT", "http://localhost/Labo3Viernes/2Parcial/vehiculoAereoTerrestre.php", true);
+        xhttp.setRequestHeader('Content-type', 'application/json');
+        if(tipo =="Aereo")
+            xhttp.send('{"modelo":"'+modelo+'", "anoFab":"'+anoFab+'", "velMax":"'+velMax+'", "altMax":"'+Atributo1+'","autonomia":"'+Atributo2+'"}');
+        else
+            xhttp.send('{"modelo":"'+modelo+'", "anoFab":"'+anoFab+'", "velMax":"'+velMax+'", "cantPue":"'+Atributo1+'","cantRue":"'+Atributo2+'"}');
+  
+    }
+
+    async function postVehiculo(id,modelo, anoFab, velMax, Atributo1, Atributo2,tipo){
+        try{
+            if(tipo=="Aereo"){
+
+                let response = await fetch("http://localhost/Labo3Viernes/2Parcial/vehiculoAereoTerrestre.php", {
+                    method: "POST",
+                    headers: {'Content-type': 'application/json'},
+                    body:('{"id":"'+id+'", "anoFab":"'+anoFab+'", "velMax":"'+velMax+'", "altMax":"'+Atributo1+'","autonomia":"'+Atributo2+'"}')
+                });
+            }else if(tipo=="Terrestre"){
+                response = await fetch ("http://localhost/Labo3Viernes/2Parcial/vehiculoAereoTerrestre.php", {
+                method :"POST",
+                headers : { 'Content-Type': 'application/json'},
+                body:('{"id":"'+id+'", "anoFab":"'+anoFab+'", "velMax":"'+velMax+'","cantRue":"'+Atributo2+'", "cantPue":"'+Atributo1+'"}')
+                });
+            }
+            
+            let r = await response; //este segundo await es porque la respuesta también es una promesa y hay que esperar a que se resuelva 
+    
+            if(r.ok)
+            {
+
+                for(let i=0; i<vehiculos.length;i++){
+                    if(vehiculos[i].id == id){
+                        vehiculos[i].modelo = modelo;
+                        vehiculos[i].anoFab = anoFab;
+                        vehiculos[i].velMax = velMax;
+                        
+                        if (tipo == "Aereo") {           
+                            vehiculos[i].altMax = Atributo1;
+                            vehiculos[i].autonomia = Atributo2;
+                        } else {
+                            vehiculos[i].cantPue = Atributo1;
+                            vehiculos[i].cantRue = Atributo2;
+                        }
+                        break;
+                    }
+                }
+            }else{
+                alert("Error al modificar ID 666");
+            }
+                
+        }catch(e){
+            alert("Error al modificar");
+            
+        }
+    }
+
+    async function deleteVehiculo(id){
+        try{
+
+            let response = await fetch("http://localhost/Labo3Viernes/2Parcial/vehiculoAereoTerrestre.php", {
+                method: "DELETE",
+                headers: {'Content-type': 'application/json'},
+                body:('{"id":"'+id+'"}')
+            });
+
+            
+            let r = await response; //este segundo await es porque la respuesta también es una promesa y hay que esperar a que se resuelva 
+
+            if(r.ok)
+            {
+                for(let i=0; i<vehiculos.length;i++){
+                    if(vehiculos[i].id == id){
+                        vehiculos.splice(i,1);
+                        break;
+                    }
+                }
+            }else{
+                alert("Error al eliminar ID 666");
+            }
+                
+        }catch(e){
+            alert("Error al eliminar");
+        }
+    }
+
+
+      /*VALIDACIONES*/
+    function validarEntero(num, min)
+    {
+        if(num != null && num != "" && num != isNaN && num%1 == 0 && num > min)
+            return true;
+            else
+            return false; 
+    }
+
+    function validarDatos(){
+        if(document.getElementById("txt_modelo").value != "" && validarEntero(document.getElementById("txt_anoFab").value,1885) && validarEntero(document.getElementById("txt_velMax").value,0)){
+            if(document.getElementById("select_filtrarABM").value==1 &&
+                validarEntero(document.getElementById("txt_altMax").value, 0) &&
+                validarEntero(document.getElementById("txt_autonomia").value, 0))
+                {
+                    return true;
+            }else if (document.getElementById("select_filtrarABM").value==2 &&
+                validarEntero(document.getElementById("txt_cantPue").value ,(-1)) &&
+                validarEntero(document.getElementById("txt_cantRue").value ,0))
+                {
+                    return true;
+            }else{
+                return false;
+            }
+        }else{
+            return false;
+        }   
+    }
+</script>
+</html>
